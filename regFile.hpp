@@ -8,10 +8,17 @@
 class RegFile : public File
 {
 public:
-    RegFile(const std::string &name);
+    RegFile(const std::string &n);
+    std::vector<char> cat() const override;
+    std::vector<char>::const_iterator begin() const override;
+    std::vector<char>::const_iterator end() const override;
+
+    std::string getName() const override;
+    std::string getType() const override;
 
 private:
     std::vector<char> data;
+    std::string name;
 };
 
 #endif
