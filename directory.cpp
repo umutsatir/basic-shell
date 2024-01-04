@@ -28,7 +28,7 @@ std::vector<char> Directory::cat() const
     for (const auto &file : allDir)
     {
         std::vector<char> fileData = file->cat();
-        concat.insert(concat.end(), fileData.begin(), fileData.end());
+        concat.insert(concat.end(), fileData.begin(), fileData.end()); // adding the text at the end of the concat variable
     }
     return concat;
 }

@@ -7,6 +7,7 @@ class OS : public File
 {
 public:
     OS();
+    ~OS();
     void run();
 
 private:
@@ -14,6 +15,7 @@ private:
     void saveProgram();
     void loadProgram();
     void runCommand(const std::string &command);
+    std::vector<std::string> seperateCommand(const std::string &command) const;
 };
 
 #endif
