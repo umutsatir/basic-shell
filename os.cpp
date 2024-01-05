@@ -89,12 +89,73 @@ std::vector<std::string> OS::seperateCommand(const std::string &command) const
     return seperatedCommands;
 }
 
-void OS::recursive_ls(std::unique_ptr<File> root) const
-{
-    for (auto iter = root.begin(); iter != root.end(); ++iter)
+void OS::recursive_ls(std::unique_ptr<File> end) const
+{ //!! will be edited
+    if (root == end)
+        return;
+    if (root->getType() == "Directory")
     {
-        if (iter->getType == "Directory")
-            recursive_ls(iter);
-        cout << iter->dirName << endl;
+        end = root->end();
+        recursive_ls(root->begin());
     }
+    std::cout << root->getName() << std::endl;
+    recursive_ls(++root);
+}
+
+void OS::ls() const
+{
+    while ()
+}
+
+void OS::cd(const std::string &dirName)
+{
+    if (dirName == ".")
+        return;
+    if (dirName == "..")
+        continue; //!! edit this
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if (iter->getName() == dirName && iter->getType() == "Directory")
+        {
+            root = iter;
+            return;
+        }
+    }
+    std::cout << "Directory not found." << std::endl;
+}
+
+void OS::cp()
+{
+}
+
+void OS::mkdir(const std::string &dirName)
+{
+    std::unique_ptr<Directory> newDir = std::make_unique<Directory>(dirName);
+    root->addFile(newDir);
+}
+
+void OS::cat(const std::string &name) const
+{
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if (iter->getName() == name && iter->getType() == "regFile")
+        {
+            std::cout << iter->cat() << std::endl; //!! check this
+            return;
+        }
+    }
+    std::cout << "Directory not found." << std::endl;
+}
+
+void OS::rm(const std::string &name)
+{
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if (iter->getName() == name)
+        {
+            root->removeFile(iter);
+            return;
+        }
+    }
+    std::cout << "Directory not found." << std::endl;
 }

@@ -12,10 +12,11 @@ public:
 
 private:
     std::unique_ptr<Directory> root;
+    std::vector<std::string> seperateCommand(const std::string &command) const;
+    void runCommand(const std::string &command);
     void saveProgram();
     void loadProgram();
-    void runCommand(const std::string &command);
-    std::vector<std::string> seperateCommand(const std::string &command) const;
+    void recursive_ls(std::unique_ptr<File> root);
 };
 
 #endif
