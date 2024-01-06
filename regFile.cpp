@@ -1,28 +1,16 @@
 #include "regFile.hpp"
 
-RegFile::RegFile(const std::string &n) : name(n) {}
-
-std::vector<char> RegFile::cat() const
+RegFile::RegFile(const std::string &n) : File(n)
 {
-    return data;
+    data = "An iterator is an object that has the ability to access items from its collection one at a time and keep track of the current position.";
 }
 
-std::vector<char>::const_iterator regFile::begin() const
+void RegFile::cat() const
 {
-    return data.begin();
+    std::cout << data << std::endl;
 }
 
-std::vector<char>::const_iterator regFile::end() const
-{
-    return data.end();
-}
-
-std::string regFile::getName() const
-{
-    return name;
-}
-
-std::string regFile::getType() const
+std::string RegFile::getType() const
 {
     return "regFile";
 }

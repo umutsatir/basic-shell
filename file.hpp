@@ -1,23 +1,21 @@
+#ifndef FILE_HPP
 #define FILE_HPP
-#ifdef FILE_HPP
 
+#include <iostream>
 #include <string>
 #include <vector>
+#include <memory>
 
 class File
 {
 public:
-    virtual ~File() {}
+    File(const std::string &n) : name(n) {}
+    virtual std::string getName() const { return name; }
+    virtual std::string getType() const { return "File"; }
+    virtual void cat() const { return; }
+    void setName(const std::string &n) { name = n; }
 
-    virtual std::string getName() const = 0;
-    virtual std::string getType() const = 0;
-    virtual std::vector<char> cat() const = 0;
-
-    // iterators
-    virtual std::vector<std::string>::const_iterator begin() const = 0;
-    virtual std::vector<std::string>::const_iterator end() const = 0;
-
-private:
+protected:
     std::string name;
 };
 

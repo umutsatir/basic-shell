@@ -3,9 +3,9 @@
 #include <iostream>
 #include <sstream>
 
-OS::OS() : root(std::make_unique<Directory>("root"))
+OS::OS() : root(std::make_unique<Directory>("root")), parent(nullptr)
 {
-    loadProgam();
+    loadProgram();
 }
 
 OS::~OS()
@@ -29,51 +29,72 @@ void OS::run()
         }
 
         runCommand(command);
+        std::cout << std::endl;
     }
 }
 
 void OS::saveProgram()
 {
+    return;
 }
 
 void OS::loadProgram()
 {
+    return;
 }
 
 void OS::runCommand(const std::string &command)
 {
     std::vector<std::string> seperatedCommands = seperateCommand(command);
-    // !! check if vector has enough members!!
-    switch (seperatedCommands[0])
+    if (seperatedCommands[0] == "ls")
     {
-    case "ls":
-        if (seperatedCommands[1] == "-R")
-            recursive_ls();
-        else
+        if (seperatedCommands.size() == 2 && seperatedCommands[1] == "-R")
+            recursive_ls(root->begin(), root->end());
+        else if (seperatedCommands.size() == 1)
             ls();
-        break;
-    case "cd":
-        cd();
-        break;
-    case "cp":
-        cp();
-        break;
-    case "mkdir":
-        mkdir();
-        break;
-    case "rm":
-        rm();
-        break;
-    case "link":
-        link();
-        break;
-    case "cat":
-        cat();
-        break;
-    default:
-        std::cout << "Command not found." << std::endl;
-        break;
     }
+    else if (seperatedCommands[0] == "cd")
+    {
+        if (seperatedCommands.size() == 2)
+            cd(seperatedCommands[1]);
+    }
+    else if (seperatedCommands[0] == "cp")
+    {
+        if (seperatedCommands.size() == 3)
+            cp(seperatedCommands[1], seperatedCommands[2]);
+    }
+    else if (seperatedCommands[0] == "mkdir")
+    {
+        if (seperatedCommands.size() == 2)
+            mkdir(seperatedCommands[1]);
+    }
+    else if (seperatedCommands[0] == "touch")
+    {
+        if (seperatedCommands.size() == 2)
+            touch(seperatedCommands[1]);
+    }
+    else if (seperatedCommands[0] == "rm")
+    {
+        if (seperatedCommands.size() == 2)
+            rm(seperatedCommands[1]);
+    }
+    else if (seperatedCommands[0] == "rmdir")
+    {
+        if (seperatedCommands.size() == 2)
+            rmdir(seperatedCommands[1]);
+    }
+    else if (seperatedCommands[0] == "link")
+    {
+        if (seperatedCommands.size() == 3)
+            link(seperatedCommands[1], seperatedCommands[2]);
+    }
+    else if (seperatedCommands[0] == "cat")
+    {
+        if (seperatedCommands.size() == 2)
+            cat(seperatedCommands[1]);
+    }
+    else
+        std::cout << "Command not found." << std::endl;
 }
 
 std::vector<std::string> OS::seperateCommand(const std::string &command) const
@@ -89,58 +110,69 @@ std::vector<std::string> OS::seperateCommand(const std::string &command) const
     return seperatedCommands;
 }
 
-void OS::recursive_ls(std::unique_ptr<File> end) const
-{ //!! will be edited
-    if (root == end)
+void OS::recursive_ls(std::vector<std::unique_ptr<File>>::const_iterator iter, std::vector<std::unique_ptr<File>>::const_iterator end) const
+{
+    if (iter == end)
         return;
-    if (root->getType() == "Directory")
-    {
-        end = root->end();
-        recursive_ls(root->begin());
-    }
-    std::cout << root->getName() << std::endl;
-    recursive_ls(++root);
+    std::cout << (*iter)->getType() << "     " << (*iter)->getName() << std::endl;
+    recursive_ls(iter + 1, end);
 }
 
 void OS::ls() const
 {
-    while ()
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+        std::cout << (*iter)->getType() << "     " << (*iter)->getName() << std::endl;
 }
 
-void OS::cd(const std::string &dirName)
+void OS::cd(const std::string &dirName) // !! check if this is working
 {
     if (dirName == ".")
         return;
-    if (dirName == "..")
-        continue; //!! edit this
+    if (dirName == ".." && parent != nullptr)
+    {
+        parent = root.get();
+        root = std::make_unique<Directory>(*parent);
+        return;
+    }
+
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
-        if (iter->getName() == dirName && iter->getType() == "Directory")
+        if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
         {
-            root = iter;
+            parent = root.get(); // get function returns the stored pointer, so we can store it in parent variable
+            root = std::make_unique<Directory>(*iter);
             return;
         }
     }
+
     std::cout << "Directory not found." << std::endl;
+    return;
 }
 
-void OS::cp()
+void OS::cp(const std::string &destName, const std::string &source)
 {
+    return;
 }
 
 void OS::mkdir(const std::string &dirName)
 {
-    std::unique_ptr<Directory> newDir = std::make_unique<Directory>(dirName);
-    root->addFile(newDir);
+    std::unique_ptr<File> newDir = std::make_unique<Directory>(dirName);
+    root->addFile(std::move(newDir));
+}
+
+void OS::touch(const std::string &dirName)
+{
+    std::unique_ptr<File> newDir = std::make_unique<RegFile>(dirName);
+    root->addFile(std::move(newDir));
 }
 
 void OS::cat(const std::string &name) const
 {
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
-        if (iter->getName() == name && iter->getType() == "regFile")
+        if ((*iter)->getName() == name)
         {
-            std::cout << iter->cat() << std::endl; //!! check this
+            (*iter)->cat();
             return;
         }
     }
@@ -151,11 +183,34 @@ void OS::rm(const std::string &name)
 {
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
-        if (iter->getName() == name)
+        if ((*iter)->getName() == name && (*iter)->getType() == "regFile")
         {
-            root->removeFile(iter);
+            root->removeFile((*iter)->getName());
+            return;
+        }
+    }
+    std::cout << "File not found." << std::endl;
+}
+
+void OS::rmdir(const std::string &name)
+{
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if ((*iter)->getName() == name && (*iter)->getType() == "Directory")
+        {
+            root->removeFile((*iter)->getName());
             return;
         }
     }
     std::cout << "Directory not found." << std::endl;
+}
+
+void OS::link(const std::string &destName, const std::string &source)
+{
+    return;
+}
+
+Directory *OS::getParentDir() const
+{
+    return parent;
 }

@@ -1,10 +1,33 @@
 #include "directory.hpp"
 
-Directory::Directory(const std::string &n) : dirName(n) {}
+Directory::Directory(const std::string &n) : File(n) {}
+
+Directory::Directory(const Directory &d) : File(d.getName())
+{
+    for (const auto &file : d.allDir)
+        allDir.push_back(std::make_unique<File>(*file));
+}
+
+Directory::Directory(Directory &&d) : File(std::move(d.getName())), allDir(std::move(d.allDir)) {}
 
 void Directory::addFile(std::unique_ptr<File> f)
 {
-    allDir.push_back(f);
+    if (isFound(f->getName()))
+    {
+        std::cout << "File or directory already exists." << std::endl;
+        return;
+    }
+    allDir.push_back(std::move(f));
+}
+
+bool Directory::isFound(const std::string &name)
+{
+    for (const auto &elem : allDir)
+    {
+        if (elem->getName() == name)
+            return true;
+    }
+    return false;
 }
 
 bool Directory::removeFile(const std::string &name)
@@ -21,16 +44,9 @@ bool Directory::removeFile(const std::string &name)
     return false;
 }
 
-std::vector<char> Directory::cat() const
+void Directory::cat() const
 {
-    std::vector<char> concat;
-
-    for (const auto &file : allDir)
-    {
-        std::vector<char> fileData = file->cat();
-        concat.insert(concat.end(), fileData.begin(), fileData.end()); // adding the text at the end of the concat variable
-    }
-    return concat;
+    std::cout << "Unable to get data because it is a directory." << std::endl;
 }
 
 std::vector<std::unique_ptr<File>>::const_iterator Directory::begin() const
@@ -41,11 +57,6 @@ std::vector<std::unique_ptr<File>>::const_iterator Directory::begin() const
 std::vector<std::unique_ptr<File>>::const_iterator Directory::end() const
 {
     return allDir.end();
-}
-
-std::string Directory::getName() const
-{
-    return dirName;
 }
 
 std::string Directory::getType() const
