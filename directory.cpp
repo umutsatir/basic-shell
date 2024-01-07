@@ -8,7 +8,7 @@ Directory::Directory(const Directory &d) : File(d.getName())
         allDir.push_back(std::make_unique<File>(*file));
 }
 
-Directory::Directory(Directory &&d) : File(std::move(d.getName())), allDir(std::move(d.allDir)) {}
+Directory::Directory(Directory &&d) : File(std::move(d.name)), allDir(std::move(d.allDir)) {}
 
 void Directory::addFile(std::unique_ptr<File> f)
 {
@@ -46,7 +46,7 @@ bool Directory::removeFile(const std::string &name)
 
 void Directory::cat() const
 {
-    std::cout << "Unable to get data because it is a directory." << std::endl;
+    std::cout << "ERROR: Unable to get data because it is a directory." << std::endl;
 }
 
 std::vector<std::unique_ptr<File>>::const_iterator Directory::begin() const
@@ -62,4 +62,19 @@ std::vector<std::unique_ptr<File>>::const_iterator Directory::end() const
 std::string Directory::getType() const
 {
     return "Directory";
+}
+
+Directory &Directory::operator=(Directory &&d)
+{
+    name = std::move(d.name);
+    allDir = std::move(d.allDir);
+    return *this;
+}
+
+Directory &Directory::operator=(const Directory &d)
+{
+    name = d.name;
+    // for (const auto &item : d.allDir)
+    //     allDir.push_back(std::move(item)); // !! fix this
+    return *this;
 }

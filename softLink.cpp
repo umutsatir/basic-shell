@@ -1,15 +1,17 @@
 #include "softLink.hpp"
 
-SoftLink::SoftLink(std::string n) : File(n), source(std::make_unique<File>(n)) {}
+SoftLink::SoftLink(std::string s, std::string n) : File(n), sourceName(s) {}
+
+SoftLink::SoftLink(const SoftLink &other) : File(other), sourceName(other.sourceName) {}
 
 void SoftLink::cat() const
 {
-    return source->cat();
+    std::cout << "An iterator is an object that has the ability to access items from its collection one at a time and keep track of the current position." << std::endl;
 }
 
 std::string SoftLink::getName() const
 {
-    return linkName;
+    return sourceName;
 }
 
 std::string SoftLink::getType() const

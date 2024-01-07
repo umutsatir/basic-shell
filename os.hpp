@@ -2,6 +2,7 @@
 #define OS_HPP
 #include "directory.hpp"
 #include "regFile.hpp"
+#include "softLink.hpp"
 
 class OS
 {
@@ -11,8 +12,10 @@ public:
     void run();
 
 private:
+    // variables
     std::unique_ptr<Directory> root;
-    Directory *parent;
+    std::vector<std::unique_ptr<Directory>> dirStack;
+    // other functions
     std::vector<std::string> seperateCommand(const std::string &command) const;
     void runCommand(const std::string &command);
     // load/save functions
@@ -29,7 +32,6 @@ private:
     void rmdir(const std::string &name);
     void link(const std::string &destName, const std::string &source);
     void touch(const std::string &dirName);
-    Directory *getParentDir() const;
 };
 
 #endif

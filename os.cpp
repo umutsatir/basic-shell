@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-OS::OS() : root(std::make_unique<Directory>("root")), parent(nullptr)
+OS::OS() : root(std::make_unique<Directory>("root"))
 {
     loadProgram();
 }
@@ -126,24 +126,24 @@ void OS::ls() const
 
 void OS::cd(const std::string &dirName) // !! check if this is working
 {
-    if (dirName == ".")
+    if (dirName == "." || dirName.empty())
         return;
-    if (dirName == ".." && parent != nullptr)
+    if (dirName == ".." && !dirStack.empty())
     {
-        parent = root.get();
-        root = std::make_unique<Directory>(*parent);
+        root = std::move(dirStack.back());
+        dirStack.pop_back();
         return;
     }
 
-    for (auto iter = root->begin(); iter != root->end(); ++iter)
-    {
-        if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
-        {
-            parent = root.get(); // get function returns the stored pointer, so we can store it in parent variable
-            root = std::make_unique<Directory>(*iter);
-            return;
-        }
-    }
+    // for (auto iter = root->begin(); iter != root->end(); ++iter)
+    // {
+    //     if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
+    //     {
+    //         dirStack.push_back(std::move(root));
+    //         root = std::make_unique<Directory>(std::move(*iter));
+    //         return;
+    //     }
+    // } // !! fix this
 
     std::cout << "Directory not found." << std::endl;
     return;
@@ -151,6 +151,20 @@ void OS::cd(const std::string &dirName) // !! check if this is working
 
 void OS::cp(const std::string &destName, const std::string &source)
 {
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if ((*iter)->getName() == source)
+        {
+            if ((*iter)->getType() == "Directory")
+                continue;
+            else if ((*iter)->getType() == "regFile")
+            {
+                std::unique_ptr<RegFile> newPtr = std::make_unique<RegFile>((*iter)->getName());
+                root->addFile(std::move(newPtr));
+            }
+        }
+    }
+    std::cout << "File or directory not found." << std::endl;
     return;
 }
 
@@ -183,7 +197,7 @@ void OS::rm(const std::string &name)
 {
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
-        if ((*iter)->getName() == name && (*iter)->getType() == "regFile")
+        if ((*iter)->getName() == name && (*iter)->getType() != "Directory")
         {
             root->removeFile((*iter)->getName());
             return;
@@ -206,11 +220,16 @@ void OS::rmdir(const std::string &name)
 }
 
 void OS::link(const std::string &destName, const std::string &source)
-{
+{ // !! already exists yazdiriyor sorunu coz
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if ((*iter)->getName() == source)
+        {
+            std::unique_ptr<SoftLink> ptr = std::make_unique<SoftLink>(source, destName);
+            root->addFile(std::move(ptr));
+            return;
+        }
+    }
+    std::cout << "File or directory not found." << std::endl;
     return;
-}
-
-Directory *OS::getParentDir() const
-{
-    return parent;
 }
