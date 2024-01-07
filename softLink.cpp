@@ -11,10 +11,15 @@ void SoftLink::cat() const
 
 std::string SoftLink::getName() const
 {
-    return sourceName;
+    return name;
 }
 
 std::string SoftLink::getType() const
 {
     return "SoftLink";
+}
+
+std::string SoftLink::getSourceName() const
+{
+    return sourceName;
 }

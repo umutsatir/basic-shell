@@ -15,6 +15,7 @@ public:
 
     std::string getName() const override;
     std::string getType() const override;
+    std::string getSourceName() const;
 
 private:
     std::string sourceName;
