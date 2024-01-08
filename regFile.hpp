@@ -12,6 +12,7 @@ public:
     void cat() const override;
 
     std::string getType() const override;
+    std::string getData() const;
 
 private:
     std::string data;

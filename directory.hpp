@@ -16,8 +16,8 @@ public:
     std::vector<std::unique_ptr<File>>::const_iterator end() const;
 
     std::string getType() const override;
-    Directory &operator=(Directory &&d);
-    Directory &operator=(const Directory &d);
+    Directory &operator=(Directory &&d) noexcept;
+    Directory &operator=(const Directory &d) = delete;
 
 private:
     std::vector<std::unique_ptr<File>> allDir;

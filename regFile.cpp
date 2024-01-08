@@ -14,3 +14,8 @@ std::string RegFile::getType() const
 {
     return "regFile";
 }
+
+std::string RegFile::getData() const
+{
+    return data;
+}

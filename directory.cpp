@@ -1,11 +1,29 @@
 #include "directory.hpp"
+#include "regFile.hpp"
+#include "softLink.hpp"
 
 Directory::Directory(const std::string &n) : File(n) {}
 
 Directory::Directory(const Directory &d) : File(d.getName())
 {
-    for (const auto &file : d.allDir)
-        allDir.push_back(std::make_unique<File>(*file));
+    for (auto iter = d.begin(); iter != d.end(); ++iter)
+    {
+        if ((*iter)->getType() == "Directory")
+        {
+            Directory *currDir = dynamic_cast<Directory *>((*iter).get());
+            this->addFile(std::move(std::make_unique<Directory>(*currDir)));
+        }
+        else if ((*iter)->getType() == "regFile")
+        {
+            RegFile *currFile = dynamic_cast<RegFile *>((*iter).get());
+            this->addFile(std::move(std::make_unique<RegFile>(*currFile)));
+        }
+        else
+        {
+            SoftLink *currLink = dynamic_cast<SoftLink *>((*iter).get());
+            this->addFile(std::move(std::make_unique<SoftLink>(*currLink)));
+        }
+    }
 }
 
 Directory::Directory(Directory &&d) : File(std::move(d.name)), allDir(std::move(d.allDir)) {}
@@ -38,6 +56,7 @@ bool Directory::removeFile(const std::string &name)
         {
             auto iter = std::find(allDir.begin(), allDir.end(), item);
             allDir.erase(iter);
+
             return true;
         }
     }
@@ -64,17 +83,18 @@ std::string Directory::getType() const
     return "Directory";
 }
 
-Directory &Directory::operator=(Directory &&d)
+Directory &Directory::operator=(Directory &&d) noexcept
 {
-    name = std::move(d.name);
-    allDir = std::move(d.allDir);
-    return *this;
-}
+    if (this != &d)
+    {
+        name = std::move(d.name);
 
-Directory &Directory::operator=(const Directory &d)
-{
-    name = d.name;
-    // for (const auto &item : d.allDir)
-    //     allDir.push_back(std::move(item)); // !! fix this
+        allDir.clear();
+
+        for (auto &item : d.allDir)
+            allDir.push_back(std::move(item));
+
+        d.allDir.clear();
+    }
     return *this;
 }

@@ -2,6 +2,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <exception>
+#include <fstream>
 
 OS::OS() : root(std::make_unique<Directory>("root"))
 {
@@ -24,7 +26,6 @@ void OS::run()
 
         if (command == "exit")
         {
-            saveProgram();
             break;
         }
 
@@ -35,17 +36,91 @@ void OS::run()
 
 void OS::saveProgram()
 {
-    return;
+    std::ofstream outFile("os_state.txt", std::ios::out);
+
+    if (!outFile.is_open())
+    {
+        std::cerr << "Error: Could not open file for writing." << std::endl;
+        return;
+    }
+
+    if (dirStack.empty())
+        saveDirectory(outFile, dirStack.begin()->get());
+    else
+        saveDirectory(outFile, root.get());
+
+    outFile.close();
 }
 
 void OS::loadProgram()
 {
-    return;
+    std::ifstream inFile("os_state.txt", std::ios::in);
+
+    if (!inFile.is_open())
+    {
+        std::cerr << "Error: Could not open file for reading. Starting with a fresh state." << std::endl;
+        return;
+    }
+
+    // clear root
+    root = std::make_unique<Directory>("root");
+
+    loadDirectory(inFile, root.get());
+
+    inFile.close();
+}
+
+void OS::saveDirectory(std::ofstream &outFile, const Directory *dir)
+{
+    for (auto iter = dir->begin(); iter != dir->end(); ++iter)
+    {
+        if ((*iter)->getType() == "Directory")
+            saveDirectory(outFile, dynamic_cast<Directory *>((*iter).get()));
+        outFile << (*iter)->getType() << " " << (*iter)->getName() << std::endl;
+    }
+
+    outFile << "END_DIR" << std::endl;
+}
+
+void OS::loadDirectory(std::ifstream &inFile, Directory *parentDir)
+{
+    std::string entry;
+    while (inFile >> entry)
+    {
+        if (entry == "END_DIR")
+            return;
+        else
+        {
+            if (entry == "Directory")
+            {
+                std::string dirName;
+                inFile >> dirName;
+                auto newDir = std::make_unique<Directory>(dirName);
+                parentDir->addFile(std::move(newDir));
+                loadDirectory(inFile, dynamic_cast<Directory *>((--(root->end()))->get())); // get the last element of the allDir array
+            }
+            else if (entry == "regFile")
+            {
+                std::string name;
+                inFile >> name;
+                auto newFile = std::make_unique<RegFile>(name);
+                parentDir->addFile(std::move(newFile));
+            }
+            else
+            {
+                std::string concatName;
+                inFile >> concatName;
+                std::vector<std::string> names = seperateCommand(concatName, ' ');
+                auto newFile = std::make_unique<SoftLink>(names[0], names[1]);
+                parentDir->addFile(std::move(newFile));
+            }
+        }
+    }
 }
 
 void OS::runCommand(const std::string &command)
 {
-    std::vector<std::string> seperatedCommands = seperateCommand(command);
+    std::vector<std::string> seperatedCommands = seperateCommand(command, ' ');
     if (seperatedCommands[0] == "ls")
     {
         if (seperatedCommands.size() == 2 && seperatedCommands[1] == "-R")
@@ -97,13 +172,13 @@ void OS::runCommand(const std::string &command)
         std::cout << "Command not found." << std::endl;
 }
 
-std::vector<std::string> OS::seperateCommand(const std::string &command) const
+std::vector<std::string> OS::seperateCommand(const std::string &command, const char &chr) const
 {
     std::vector<std::string> seperatedCommands;
 
     std::stringstream ss(command);
     std::string word;
-    while (getline(ss, word, ' '))
+    while (getline(ss, word, chr))
     {
         seperatedCommands.push_back(word);
     }
@@ -124,43 +199,103 @@ void OS::ls() const
         std::cout << (*iter)->getType() << "     " << (*iter)->getName() << std::endl;
 }
 
-void OS::cd(const std::string &dirName) // !! check if this is working
+void OS::cd(const std::string &dirName)
 {
     if (dirName == "." || dirName.empty())
         return;
-    if (dirName == ".." && !dirStack.empty())
+    if (dirName == "..")
     {
+        if (dirStack.empty())
+        {
+            std::cout << "You are already in the root directory." << std::endl;
+            return;
+        }
         root = std::move(dirStack.back());
         dirStack.pop_back();
         return;
     }
 
-    // for (auto iter = root->begin(); iter != root->end(); ++iter)
-    // {
-    //     if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
-    //     {
-    //         dirStack.push_back(std::move(root));
-    //         root = std::make_unique<Directory>(std::move(*iter));
-    //         return;
-    //     }
-    // } // !! fix this
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
+        {
+            dirStack.push_back(std::move(root));
+            Directory *currDir = dynamic_cast<Directory *>((*iter).get());
+            root = std::make_unique<Directory>(*currDir);
+            return;
+        }
+    }
 
     std::cout << "Directory not found." << std::endl;
-    return;
 }
 
-void OS::cp(const std::string &destName, const std::string &source)
+Directory *OS::cd_nonsave(const std::string &dirName)
+{
+    if (dirName == "." || dirName.empty())
+        return root.get();
+    if (dirName == "..")
+    {
+        if (dirStack.empty())
+        {
+            std::cout << "You are already in the root directory." << std::endl;
+            return root.get();
+        }
+        return dirStack.back().get();
+    }
+
+    for (auto iter = root->begin(); iter != root->end(); ++iter)
+    {
+        if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
+        {
+            Directory *currDir = dynamic_cast<Directory *>((*iter).get());
+            return currDir;
+        }
+    }
+
+    std::cout << "Directory not found." << std::endl;
+    return root.get();
+}
+
+void OS::cp(const std::string &source, const std::string &dirName)
 {
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
         if ((*iter)->getName() == source)
         {
+            Directory *sourceDir = cd_nonsave(dirName);
             if ((*iter)->getType() == "Directory")
-                continue;
+            {
+                std::unique_ptr<Directory> destDir;
+                if (source == "." || source.empty())
+                    destDir = std::make_unique<Directory>(*(root.get()));
+                else
+                    destDir = std::make_unique<Directory>(source);
+
+                for (auto iter = root->begin(); iter != root->end(); ++iter)
+                {
+                    if ((*iter)->getType() == "Directory")
+                    {
+                        Directory *currDir = dynamic_cast<Directory *>(((*iter).get()));
+                        destDir->addFile(std::move(std::make_unique<Directory>(*currDir)));
+                    }
+                    else if ((*iter)->getType() == "regFile")
+                    {
+                        RegFile *currFile = dynamic_cast<RegFile *>((*iter).get());
+                        destDir->addFile(std::move(std::make_unique<RegFile>(*currFile)));
+                    }
+                    else
+                    {
+                        SoftLink *currLink = dynamic_cast<SoftLink *>((*iter).get());
+                        destDir->addFile(std::move(std::make_unique<SoftLink>(*currLink)));
+                    }
+                }
+                sourceDir->addFile(std::move(destDir));
+            }
             else if ((*iter)->getType() == "regFile")
             {
-                std::unique_ptr<RegFile> newPtr = std::make_unique<RegFile>((*iter)->getName());
-                root->addFile(std::move(newPtr));
+                RegFile *currFile = dynamic_cast<RegFile *>((*iter).get());
+                sourceDir->addFile(std::move(std::make_unique<RegFile>(*currFile)));
+                return;
             }
         }
     }
@@ -219,8 +354,8 @@ void OS::rmdir(const std::string &name)
     std::cout << "Directory not found." << std::endl;
 }
 
-void OS::link(const std::string &destName, const std::string &source)
-{ // !! already exists yazdiriyor sorunu coz
+void OS::link(const std::string &source, const std::string &destName)
+{
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
         if ((*iter)->getName() == source)

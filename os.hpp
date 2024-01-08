@@ -16,11 +16,14 @@ private:
     std::unique_ptr<Directory> root;
     std::vector<std::unique_ptr<Directory>> dirStack;
     // other functions
-    std::vector<std::string> seperateCommand(const std::string &command) const;
+    std::vector<std::string> seperateCommand(const std::string &command, const char &chr) const;
     void runCommand(const std::string &command);
+    Directory *cd_nonsave(const std::string &dirName);
     // load/save functions
     void saveProgram();
     void loadProgram();
+    void saveDirectory(std::ofstream &outFile, const Directory *dir);
+    void loadDirectory(std::ifstream &inFile, Directory *parentDir);
     // commands
     void recursive_ls(std::vector<std::unique_ptr<File>>::const_iterator iter, std::vector<std::unique_ptr<File>>::const_iterator end) const;
     void ls() const;
