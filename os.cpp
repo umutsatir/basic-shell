@@ -44,10 +44,10 @@ void OS::saveProgram()
         return;
     }
 
-    if (dirStack.empty())
-        saveDirectory(outFile, dirStack.begin()->get());
+    if (!dirStack.empty())
+        saveDirectory(outFile, dirStack.begin()->get(), false);
     else
-        saveDirectory(outFile, root.get());
+        saveDirectory(outFile, root.get(), false);
 
     outFile.close();
 }
@@ -70,16 +70,17 @@ void OS::loadProgram()
     inFile.close();
 }
 
-void OS::saveDirectory(std::ofstream &outFile, const Directory *dir)
-{
+void OS::saveDirectory(std::ofstream &outFile, const Directory *dir, bool isDir)
+{ // !! softlink icin sourcenamei de cek!!
     for (auto iter = dir->begin(); iter != dir->end(); ++iter)
     {
-        if ((*iter)->getType() == "Directory")
-            saveDirectory(outFile, dynamic_cast<Directory *>((*iter).get()));
         outFile << (*iter)->getType() << " " << (*iter)->getName() << std::endl;
+        if ((*iter)->getType() == "Directory")
+            saveDirectory(outFile, dynamic_cast<Directory *>((*iter).get()), true);
     }
 
-    outFile << "END_DIR" << std::endl;
+    if (isDir)
+        outFile << "END_DIR" << std::endl;
 }
 
 void OS::loadDirectory(std::ifstream &inFile, Directory *parentDir)
@@ -325,7 +326,7 @@ void OS::cat(const std::string &name) const
             return;
         }
     }
-    std::cout << "Directory not found." << std::endl;
+    std::cout << "File not found." << std::endl;
 }
 
 void OS::rm(const std::string &name)
@@ -358,13 +359,13 @@ void OS::link(const std::string &source, const std::string &destName)
 {
     for (auto iter = root->begin(); iter != root->end(); ++iter)
     {
-        if ((*iter)->getName() == source)
+        if ((*iter)->getName() == source && (*iter)->getType() == "regFile")
         {
             std::unique_ptr<SoftLink> ptr = std::make_unique<SoftLink>(source, destName);
             root->addFile(std::move(ptr));
             return;
         }
     }
-    std::cout << "File or directory not found." << std::endl;
+    std::cout << "File not found." << std::endl;
     return;
 }

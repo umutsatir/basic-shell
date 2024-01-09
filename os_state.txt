@@ -1,0 +1,4 @@
+Directory test
+regFile file
+END_DIR
+regFile file

@@ -11,7 +11,7 @@ void SoftLink::cat() const
 
 std::string SoftLink::getName() const
 {
-    return name + " " + sourceName;
+    return name;
 }
 
 std::string SoftLink::getType() const

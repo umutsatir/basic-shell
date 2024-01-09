@@ -22,7 +22,7 @@ private:
     // load/save functions
     void saveProgram();
     void loadProgram();
-    void saveDirectory(std::ofstream &outFile, const Directory *dir);
+    void saveDirectory(std::ofstream &outFile, const Directory *dir, bool isDir);
     void loadDirectory(std::ifstream &inFile, Directory *parentDir);
     // commands
     void recursive_ls(std::vector<std::unique_ptr<File>>::const_iterator iter, std::vector<std::unique_ptr<File>>::const_iterator end) const;
