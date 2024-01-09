@@ -5,7 +5,7 @@
 #include <exception>
 #include <fstream>
 
-OS::OS() : root(std::make_unique<Directory>("root"))
+OS::OS() : rootPtr(std::make_unique<Directory>("root")), root(rootPtr.get())
 {
     loadProgram();
 }
@@ -13,14 +13,21 @@ OS::OS() : root(std::make_unique<Directory>("root"))
 OS::~OS()
 {
     saveProgram();
+    delete root;
 }
 
 void OS::run()
 {
     while (true)
     {
+        if (getPoints(rootPtr.get()) / 1000000 >= 10)
+        {
+            std::cout << "Disk size is full. Program will be terminated." << std::endl;
+            break;
+        }
         std::string command;
         std::cout << "MyShell" << std::endl
+                  << "Current size: " << getPoints(rootPtr.get()) << " Bytes" << std::endl
                   << "> ";
         std::getline(std::cin, command);
 
@@ -34,6 +41,18 @@ void OS::run()
     }
 }
 
+long int OS::getPoints(Directory *_root)
+{
+    size = 0;
+    for (auto iter = _root->begin(); iter != _root->end(); ++iter)
+    {
+        size += sizeof(*(iter->get()));
+        if ((*iter)->getType() == "Directory")
+            size += getPoints(dynamic_cast<Directory *>(iter->get()));
+    }
+    return size;
+}
+
 void OS::saveProgram()
 {
     std::ofstream outFile("os_state.txt", std::ios::out);
@@ -45,9 +64,9 @@ void OS::saveProgram()
     }
 
     if (!dirStack.empty())
-        saveDirectory(outFile, dirStack.begin()->get(), false);
+        saveDirectory(outFile, *(dirStack.begin()), false);
     else
-        saveDirectory(outFile, root.get(), false);
+        saveDirectory(outFile, root, false);
 
     outFile.close();
 }
@@ -62,19 +81,22 @@ void OS::loadProgram()
         return;
     }
 
-    // clear root
-    root = std::make_unique<Directory>("root");
-
-    loadDirectory(inFile, root.get());
+    loadDirectory(inFile, root);
 
     inFile.close();
 }
 
 void OS::saveDirectory(std::ofstream &outFile, const Directory *dir, bool isDir)
-{ // !! softlink icin sourcenamei de cek!!
+{
     for (auto iter = dir->begin(); iter != dir->end(); ++iter)
     {
-        outFile << (*iter)->getType() << " " << (*iter)->getName() << std::endl;
+        outFile << (*iter)->getType() << " " << (*iter)->getName();
+
+        if ((*iter)->getType() == "SoftLink")
+            outFile << " " << dynamic_cast<SoftLink *>(iter->get())->getSourceName();
+
+        outFile << std::endl;
+
         if ((*iter)->getType() == "Directory")
             saveDirectory(outFile, dynamic_cast<Directory *>((*iter).get()), true);
     }
@@ -92,27 +114,28 @@ void OS::loadDirectory(std::ifstream &inFile, Directory *parentDir)
             return;
         else
         {
+            std::string name;
             if (entry == "Directory")
             {
-                std::string dirName;
-                inFile >> dirName;
-                auto newDir = std::make_unique<Directory>(dirName);
+                inFile >> name;
+                auto newDir = std::make_unique<Directory>(name);
                 parentDir->addFile(std::move(newDir));
-                loadDirectory(inFile, dynamic_cast<Directory *>((--(root->end()))->get())); // get the last element of the allDir array
+                auto iter = parentDir->end();
+                --iter; // selecting the last element of the allDir
+                loadDirectory(inFile, dynamic_cast<Directory *>(iter->get()));
             }
             else if (entry == "regFile")
             {
-                std::string name;
                 inFile >> name;
                 auto newFile = std::make_unique<RegFile>(name);
                 parentDir->addFile(std::move(newFile));
             }
             else
             {
-                std::string concatName;
-                inFile >> concatName;
-                std::vector<std::string> names = seperateCommand(concatName, ' ');
-                auto newFile = std::make_unique<SoftLink>(names[0], names[1]);
+                inFile >> name;
+                std::string sourceName;
+                inFile >> sourceName;
+                auto newFile = std::make_unique<SoftLink>(sourceName, name);
                 parentDir->addFile(std::move(newFile));
             }
         }
@@ -128,46 +151,64 @@ void OS::runCommand(const std::string &command)
             recursive_ls(root->begin(), root->end());
         else if (seperatedCommands.size() == 1)
             ls();
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "cd")
     {
         if (seperatedCommands.size() == 2)
             cd(seperatedCommands[1]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "cp")
     {
         if (seperatedCommands.size() == 3)
             cp(seperatedCommands[1], seperatedCommands[2]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "mkdir")
     {
         if (seperatedCommands.size() == 2)
             mkdir(seperatedCommands[1]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "touch")
     {
         if (seperatedCommands.size() == 2)
             touch(seperatedCommands[1]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "rm")
     {
         if (seperatedCommands.size() == 2)
             rm(seperatedCommands[1]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "rmdir")
     {
         if (seperatedCommands.size() == 2)
             rmdir(seperatedCommands[1]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "link")
     {
         if (seperatedCommands.size() == 3)
             link(seperatedCommands[1], seperatedCommands[2]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else if (seperatedCommands[0] == "cat")
     {
         if (seperatedCommands.size() == 2)
             cat(seperatedCommands[1]);
+        else
+            std::cout << "ERROR: Parameters are not correct." << std::endl;
     }
     else
         std::cout << "Command not found." << std::endl;
@@ -211,7 +252,7 @@ void OS::cd(const std::string &dirName)
             std::cout << "You are already in the root directory." << std::endl;
             return;
         }
-        root = std::move(dirStack.back());
+        root = dirStack.back();
         dirStack.pop_back();
         return;
     }
@@ -220,9 +261,9 @@ void OS::cd(const std::string &dirName)
     {
         if ((*iter)->getName() == dirName && (*iter)->getType() == "Directory")
         {
-            dirStack.push_back(std::move(root));
+            dirStack.push_back(root);
             Directory *currDir = dynamic_cast<Directory *>((*iter).get());
-            root = std::make_unique<Directory>(*currDir);
+            root = currDir;
             return;
         }
     }
@@ -233,15 +274,15 @@ void OS::cd(const std::string &dirName)
 Directory *OS::cd_nonsave(const std::string &dirName)
 {
     if (dirName == "." || dirName.empty())
-        return root.get();
+        return root;
     if (dirName == "..")
     {
         if (dirStack.empty())
         {
             std::cout << "You are already in the root directory." << std::endl;
-            return root.get();
+            return root;
         }
-        return dirStack.back().get();
+        return dirStack.back();
     }
 
     for (auto iter = root->begin(); iter != root->end(); ++iter)
@@ -254,54 +295,59 @@ Directory *OS::cd_nonsave(const std::string &dirName)
     }
 
     std::cout << "Directory not found." << std::endl;
-    return root.get();
+    return root;
 }
 
 void OS::cp(const std::string &source, const std::string &dirName)
 {
-    for (auto iter = root->begin(); iter != root->end(); ++iter)
-    {
-        if ((*iter)->getName() == source)
-        {
-            Directory *sourceDir = cd_nonsave(dirName);
-            if ((*iter)->getType() == "Directory")
-            {
-                std::unique_ptr<Directory> destDir;
-                if (source == "." || source.empty())
-                    destDir = std::make_unique<Directory>(*(root.get()));
-                else
-                    destDir = std::make_unique<Directory>(source);
 
-                for (auto iter = root->begin(); iter != root->end(); ++iter)
-                {
-                    if ((*iter)->getType() == "Directory")
-                    {
-                        Directory *currDir = dynamic_cast<Directory *>(((*iter).get()));
-                        destDir->addFile(std::move(std::make_unique<Directory>(*currDir)));
-                    }
-                    else if ((*iter)->getType() == "regFile")
-                    {
-                        RegFile *currFile = dynamic_cast<RegFile *>((*iter).get());
-                        destDir->addFile(std::move(std::make_unique<RegFile>(*currFile)));
-                    }
-                    else
-                    {
-                        SoftLink *currLink = dynamic_cast<SoftLink *>((*iter).get());
-                        destDir->addFile(std::move(std::make_unique<SoftLink>(*currLink)));
-                    }
-                }
-                sourceDir->addFile(std::move(destDir));
-            }
-            else if ((*iter)->getType() == "regFile")
-            {
-                RegFile *currFile = dynamic_cast<RegFile *>((*iter).get());
-                sourceDir->addFile(std::move(std::make_unique<RegFile>(*currFile)));
-                return;
-            }
-        }
+    Directory *sourceDir = cd_nonsave(source);
+    Directory *destDir = cd_nonsave(dirName);
+    if (sourceDir->getType() == "Directory")
+    {
+        std::unique_ptr<Directory> newDir;
+        if (source == "." || source.empty())
+            newDir = std::make_unique<Directory>(*root);
+        else
+            newDir = std::make_unique<Directory>(source);
+        Directory *newDirPtr = newDir.get();
+        cp_directory(sourceDir, newDirPtr);
+        destDir->addFile(std::move(newDir));
+        return;
+    }
+    else if (sourceDir->getType() == "regFile")
+    {
+        RegFile *currFile = dynamic_cast<RegFile *>(sourceDir);
+        sourceDir->addFile(std::move(std::make_unique<RegFile>(*currFile)));
+        return;
     }
     std::cout << "File or directory not found." << std::endl;
     return;
+}
+
+void OS::cp_directory(Directory *sourceDir, Directory *destDir)
+{
+    for (auto iter = sourceDir->begin(); iter != sourceDir->end(); ++iter)
+    {
+        if ((*iter)->getType() == "Directory")
+        {
+            destDir->addFile(std::move(std::make_unique<Directory>((*iter)->getName()))); // copying the directory
+            auto destDirIter = destDir->end();
+            --destDirIter;
+            if (destDirIter->get())
+                cp_directory(dynamic_cast<Directory *>(iter->get()), dynamic_cast<Directory *>(destDirIter->get())); // copying the contents of the directory}
+        }
+        else if ((*iter)->getType() == "regFile")
+        {
+            RegFile *currFile = dynamic_cast<RegFile *>((*iter).get());
+            destDir->addFile(std::move(std::make_unique<RegFile>(*currFile)));
+        }
+        else
+        {
+            SoftLink *currLink = dynamic_cast<SoftLink *>((*iter).get());
+            destDir->addFile(std::move(std::make_unique<SoftLink>(*currLink)));
+        }
+    }
 }
 
 void OS::mkdir(const std::string &dirName)

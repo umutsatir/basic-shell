@@ -13,12 +13,15 @@ public:
 
 private:
     // variables
-    std::unique_ptr<Directory> root;
-    std::vector<std::unique_ptr<Directory>> dirStack;
+    std::unique_ptr<Directory> rootPtr;
+    Directory *root;
+    std::vector<Directory *> dirStack;
+    long int size = 0;
     // other functions
     std::vector<std::string> seperateCommand(const std::string &command, const char &chr) const;
     void runCommand(const std::string &command);
     Directory *cd_nonsave(const std::string &dirName);
+    long int getPoints(Directory *_root);
     // load/save functions
     void saveProgram();
     void loadProgram();
@@ -29,6 +32,7 @@ private:
     void ls() const;
     void cd(const std::string &dirName);
     void cp(const std::string &destName, const std::string &source);
+    void cp_directory(Directory *sourceDir, Directory *destDir);
     void mkdir(const std::string &dirName);
     void cat(const std::string &name) const;
     void rm(const std::string &name);

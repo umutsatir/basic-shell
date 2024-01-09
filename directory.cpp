@@ -56,7 +56,6 @@ bool Directory::removeFile(const std::string &name)
         {
             auto iter = std::find(allDir.begin(), allDir.end(), item);
             allDir.erase(iter);
-
             return true;
         }
     }

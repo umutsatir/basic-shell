@@ -1,4 +1,19 @@
-Directory test
-regFile file
+Directory Desktop
+Directory cppfiles
+regFile test.cpp
+regFile cmd.cpp
 END_DIR
-regFile file
+regFile iterators.txt
+END_DIR
+regFile umut.txt
+Directory Documents
+Directory vscode
+regFile prettier.json
+Directory settings
+regFile plugins.json
+regFile security.json
+END_DIR
+END_DIR
+regFile python.py
+END_DIR
+SoftLink umut.exe umut.txt
