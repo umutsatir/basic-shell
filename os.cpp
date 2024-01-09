@@ -20,14 +20,16 @@ void OS::run()
 {
     while (true)
     {
-        if (getPoints(rootPtr.get()) / 1000000 >= 10)
+        size = 0;
+        getPoints(rootPtr.get());
+        if (size / 1000000 >= 10)
         {
             std::cout << "Disk size is full. Program will be terminated." << std::endl;
             break;
         }
         std::string command;
         std::cout << "MyShell" << std::endl
-                  << "Current size: " << getPoints(rootPtr.get()) << " Bytes" << std::endl
+                  << "Current size: " << size << " Bytes" << std::endl
                   << "> ";
         std::getline(std::cin, command);
 
@@ -43,7 +45,6 @@ void OS::run()
 
 long int OS::getPoints(Directory *_root)
 {
-    size = 0;
     for (auto iter = _root->begin(); iter != _root->end(); ++iter)
     {
         size += sizeof(*(iter->get()));
